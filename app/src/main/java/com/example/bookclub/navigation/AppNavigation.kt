@@ -1,5 +1,9 @@
 package com.example.bookclub.navigation
 
+import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -9,39 +13,42 @@ import com.example.bookclub.ui.LoginScreen
 import com.example.bookclub.ui.RegisterScreen
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.example.bookclub.data.AppDatabase
 import kotlinx.coroutines.launch
+import com.example.bookclub.data.User
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-
     val context = LocalContext.current
-    val userPreferences = remember { UserPreferences(context) }
 
+    val userPreferences = remember { UserPreferences(context) }
+    val database = remember { AppDatabase.getDatabase(context) }
     val coroutineScope = rememberCoroutineScope()
 
     val userData by userPreferences.userFlow.collectAsState(initial = null)
-
     if (userData == null) return
-
     val startDest = if (userData!!.isLoggedIn) "home" else "login"
 
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = startDest
     ) {
         composable(route = "login") {
             LoginScreen(
                 onNavigateToRegister = {
                     navController.navigate("register")
                 },
-                onLoginSuccess = { email ->
+                onLoginSuccess = { email, password ->
                     coroutineScope.launch {
-                        val generatedUsername = email.substringBefore("@")
-                        userPreferences.saveUser(generatedUsername)
-
-                        navController.navigate("home"){
-                            popUpTo("login") { inclusive = true }
+                        val user = database.userDao().getUserByEmail(email)
+                        if (user != null && user.password == password) {
+                            userPreferences.saveUser(user.username)
+                            navController.navigate("home") { popUpTo("login") {inclusive = true} }
+                        } else {
+                            Toast.makeText(context, "Email sau parola incorecte!", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -53,10 +60,11 @@ fun AppNavigation() {
                 onNavigateBackToLogin = {
                     navController.popBackStack()
                 },
-                onRegisterSuccess = { username ->
+                onRegisterSuccess = { username, email, password ->
                     coroutineScope.launch {
+                        val newUser = User(username = username, email = email, password = password)
+                        database.userDao().insertUser(newUser)
                         userPreferences.saveUser(username)
-
                         navController.navigate("home") {
                             popUpTo("login") { inclusive = true }
                         }
@@ -66,7 +74,29 @@ fun AppNavigation() {
         }
 
         composable(route = "home") {
-            Text("Bine ai venit, ${userData?.username}! Aici va fi lista de cluburi.")
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+            ) {
+                Text("Bine ai venit, ${userData?.username}!")
+                Text("Baza de date functioneaza!")
+
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(32.dp))
+
+                androidx.compose.material3.Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            userPreferences.logoutUser()
+                            navController.navigate("login") {
+                                popUpTo("home") { inclusive = true }
+                            }
+                        }
+                    }
+                ) {
+                    Text("Logout")
+                }
+            }
         }
     }
 }

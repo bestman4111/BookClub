@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit = {},
-    onLoginSuccess: (String) -> Unit = {}
+    onLoginSuccess: (String, String) -> Unit = { _, _ -> }
 ) {
     var email by remember {mutableStateOf("")}
     var password by remember {mutableStateOf("")}
@@ -49,7 +49,7 @@ fun LoginScreen(
         Button(
             onClick = {
                 if (email.isNotEmpty() && password.isNotEmpty()) {
-                    onLoginSuccess(email)
+                    onLoginSuccess(email, password)
                 }
             },
             modifier = Modifier.fillMaxWidth()
