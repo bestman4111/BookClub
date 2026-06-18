@@ -18,7 +18,10 @@ import androidx.compose.ui.unit.dp
 import com.example.bookclub.data.AppDatabase
 import kotlinx.coroutines.launch
 import com.example.bookclub.data.User
+import com.example.bookclub.ui.BookDetailsScreen
 import com.example.bookclub.ui.HomeScreen
+import kotlinx.coroutines.flow.compose
+import java.net.URLEncoder
 
 @Composable
 fun AppNavigation() {
@@ -75,14 +78,61 @@ fun AppNavigation() {
         }
 
         composable(route = "home") {
+            val clubs by database.clubDao().getAllClubs().collectAsState(initial = emptyList())
+
             HomeScreen(
                 username = userData?.username ?: "Cititorule",
+                clubs = clubs,
                 onLogout = {
                     coroutineScope.launch {
                         userPreferences.logoutUser()
                         navController.navigate("login") {
                             popUpTo("home") { inclusive = true }
                         }
+                    }
+                },
+                onBookClick = { title, author, year ->
+                    val encodedTitle = URLEncoder.encode(title, "UTF-8")
+                    val encodedAuthor = URLEncoder.encode(author, "UTF-8")
+                    val encodedYear = URLEncoder.encode(year, "UTF-8")
+
+                    navController.navigate("details/$encodedTitle/$encodedAuthor/$encodedYear")
+                }
+            )
+        }
+
+        composable(
+            route = "details/{title}/{author}/{year}",
+            arguments = listOf(
+                androidx.navigation.navArgument("title") {type = androidx.navigation.NavType.StringType},
+                androidx.navigation.navArgument("author") {type = androidx.navigation.NavType.StringType},
+                androidx.navigation.navArgument("year") {type = androidx.navigation.NavType.StringType}
+            )
+        ) { backStackEntry ->
+            val title = java.net.URLDecoder.decode(backStackEntry.arguments?.getString("title") ?: "", "UTF-8")
+            val author = java.net.URLDecoder.decode(backStackEntry.arguments?.getString("author") ?: "", "UTF-8")
+            val year = java.net.URLDecoder.decode(backStackEntry.arguments?.getString("year") ?: "", "UTF-8")
+
+            BookDetailsScreen(
+                title = title,
+                author = author,
+                year = year,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onCreateClub = {clubName, isPrivate, clubPassword ->
+                    coroutineScope.launch {
+                        val newClub = com.example.bookclub.data.Club(
+                            name = clubName,
+                            bookTitle = title,
+                            isPrivate = isPrivate,
+                            password = clubPassword
+                        )
+
+                        database.clubDao().insertClub(newClub)
+
+                        Toast.makeText(context, "Clubul '$clubName' a fost creat!", Toast.LENGTH_SHORT).show()
+                        navController.popBackStack()
                     }
                 }
             )
