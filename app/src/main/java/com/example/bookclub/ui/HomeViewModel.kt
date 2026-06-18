@@ -23,6 +23,26 @@ class HomeViewModel : ViewModel() {
         fetchBooks()
     }
 
+    fun searchBooks(query: String) {
+        if(query.isBlank()) {
+            fetchBooks()
+            return
+        }
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val response = RetrofitInstance.api.searchBooks(query)
+                _books.value = response.docs
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Eroare la cautare: ${e.localizedMessage}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     private fun fetchBooks() {
         viewModelScope.launch() {
             _isLoading.value = true

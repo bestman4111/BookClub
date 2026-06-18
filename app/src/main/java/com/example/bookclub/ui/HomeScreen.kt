@@ -3,6 +3,7 @@ package com.example.bookclub.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -66,17 +67,48 @@ fun HomeScreen(
 
             when(selectedTab) {
                 0 -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        when {
-                            isLoading -> CircularProgressIndicator()
-                            errorMessage != null -> Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error)
-                            else -> {
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    items(books) { bookItem ->
-                                        BookItem(bookItem = bookItem, onClick = onBookClick)
+                    var searchQuery by remember { mutableStateOf("") }
+
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            placeholder = { Text("Cauta o carte sau un autor...") },
+                            singleLine = true,
+                            trailingIcon = {
+                                IconButton(onClick = {
+                                    viewModel.searchBooks(searchQuery)
+                                }) {
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.Search,
+                                        contentDescription = "Cauta"
+                                    )
+                                }
+                            }
+                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when {
+                                isLoading -> CircularProgressIndicator()
+                                errorMessage != null -> Text(
+                                    text = errorMessage!!,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+
+                                else -> {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize()
+                                            .padding(horizontal = 16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        items(books) { bookItem ->
+                                            BookItem(bookItem = bookItem, onClick = onBookClick)
+                                        }
                                     }
                                 }
                             }
