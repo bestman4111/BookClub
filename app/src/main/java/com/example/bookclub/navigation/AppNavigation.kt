@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.example.bookclub.data.AppDatabase
 import kotlinx.coroutines.launch
 import com.example.bookclub.data.User
+import com.example.bookclub.ui.HomeScreen
 
 @Composable
 fun AppNavigation() {
@@ -74,29 +75,17 @@ fun AppNavigation() {
         }
 
         composable(route = "home") {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
-            ) {
-                Text("Bine ai venit, ${userData?.username}!")
-                Text("Baza de date functioneaza!")
-
-                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(32.dp))
-
-                androidx.compose.material3.Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            userPreferences.logoutUser()
-                            navController.navigate("login") {
-                                popUpTo("home") { inclusive = true }
-                            }
+            HomeScreen(
+                username = userData?.username ?: "Cititorule",
+                onLogout = {
+                    coroutineScope.launch {
+                        userPreferences.logoutUser()
+                        navController.navigate("login") {
+                            popUpTo("home") { inclusive = true }
                         }
                     }
-                ) {
-                    Text("Logout")
                 }
-            }
+            )
         }
     }
 }
