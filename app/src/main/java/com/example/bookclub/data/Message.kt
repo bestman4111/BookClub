@@ -1,0 +1,14 @@
+package com.example.bookclub.data
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "messages")
+data class Message(
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+
+    val clubName: String,
+    val senderName: String,
+    val text: String
+)

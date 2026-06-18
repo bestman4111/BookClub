@@ -19,6 +19,7 @@ import com.example.bookclub.data.AppDatabase
 import kotlinx.coroutines.launch
 import com.example.bookclub.data.User
 import com.example.bookclub.ui.BookDetailsScreen
+import com.example.bookclub.ui.ChatScreen
 import com.example.bookclub.ui.HomeScreen
 import kotlinx.coroutines.flow.compose
 import java.net.URLEncoder
@@ -97,6 +98,10 @@ fun AppNavigation() {
                     val encodedYear = URLEncoder.encode(year, "UTF-8")
 
                     navController.navigate("details/$encodedTitle/$encodedAuthor/$encodedYear")
+                },
+                onClubJoin = {club ->
+                    val encodedName = java.net.URLEncoder.encode(club.name, "UTF-8")
+                    navController.navigate("chat/$encodedName")
                 }
             )
         }
@@ -136,6 +141,34 @@ fun AppNavigation() {
                     }
                 }
             )
+        }
+
+        composable(
+            route = "chat/{clubName}",
+            arguments = listOf(androidx.navigation.navArgument("clubName") {type = androidx.navigation.NavType.StringType})
+        ) { backStackEntry ->
+            val clubName = java.net.URLDecoder.decode(backStackEntry.arguments?.getString("clubName") ?: "", "UTF-8")
+            val currentUsername = userData?.username ?: "Anonim"
+
+            val chatMessages by database.messageDao().getMessagesForClub(clubName).collectAsState(initial = emptyList())
+
+            ChatScreen(
+                clubName = clubName,
+                username = currentUsername,
+                messages = chatMessages,
+                onSendMessage = {text ->
+                    coroutineScope.launch {
+                        val newMessage = com.example.bookclub.data.Message(
+                            clubName = clubName,
+                            senderName = currentUsername,
+                            text = text
+                        )
+                        database.messageDao().insertMessage(newMessage)
+                    }
+                },
+                onNavigateBack = {navController.popBackStack()}
+            )
+
         }
     }
 }

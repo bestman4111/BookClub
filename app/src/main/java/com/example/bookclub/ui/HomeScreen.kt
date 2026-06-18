@@ -21,6 +21,7 @@ fun HomeScreen(
     clubs: List<Club>,
     onLogout: () -> Unit,
     onBookClick: (String, String, String) -> Unit,
+    onClubJoin: (Club) -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
     val books by viewModel.books.collectAsState()
@@ -29,6 +30,10 @@ fun HomeScreen(
 
     var selectedTab by remember {mutableStateOf(0)}
     val tabs = listOf("Exploreaza carti", "Cluburi active")
+
+    var clubToJoin by remember {mutableStateOf<Club?>(null)}
+    var enteredPassword by remember {mutableStateOf("")}
+    var isPasswordError by remember {mutableStateOf(false)}
 
     Scaffold(
         topBar = {
@@ -81,7 +86,7 @@ fun HomeScreen(
                 1 -> {
                     if (clubs.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Nu s-a creat inca vreun club. Fii primul care deschide unul din detaliile unei carti!")
+                            Text("Nu s-a creat inca vreun club.")
                         }
                     } else {
                         LazyColumn(
@@ -89,7 +94,15 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(clubs) {club ->
-                                ClubItem(club = club)
+                                ClubItem(club = club, onClick = {clickedClub ->
+                                    if(clickedClub.isPrivate) {
+                                        clubToJoin = clickedClub
+                                        enteredPassword = ""
+                                        isPasswordError = false
+                                    } else {
+                                        onClubJoin(clickedClub)
+                                    }
+                                })
                             }
                         }
                     }
@@ -97,13 +110,53 @@ fun HomeScreen(
             }
         }
     }
+
+    if(clubToJoin != null) {
+        AlertDialog(
+            onDismissRequest = {clubToJoin = null},
+            title = {Text("Club Privat")},
+            text = {
+                Column {
+                    Text("Acest club necesita o parola de acces.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = enteredPassword,
+                        onValueChange = {
+                            enteredPassword = it
+                            isPasswordError = false
+                        },
+                        label = {Text("Parola")},
+                        isError = isPasswordError,
+                        singleLine = true
+                    )
+                    if(isPasswordError) {
+                        Text("Parola incorecta!", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if(enteredPassword == clubToJoin?.password) {
+                        onClubJoin(clubToJoin!!)
+                        clubToJoin = null
+                    } else {
+                        isPasswordError = true
+                    }
+                }) {Text("Intra")}
+            },
+            dismissButton = {
+                TextButton(onClick = {clubToJoin = null}) { Text("Anuleaza") }
+            }
+        )
+    }
 }
 
 @Composable
-fun ClubItem(club: Club) {
+fun ClubItem(club: Club, onClick: (Club) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        onClick = {onClick(club)}
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = club.name, style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
